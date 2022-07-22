@@ -1,0 +1,13 @@
+﻿global using System.Collections;
+global using InjectionMoldingMachineDataAcquisitionService.Communication.Clients;
+global using InjectionMoldingMachineDataAcquisitionService.Communication.Exceptions;
+global using InjectionMoldingMachineDataAcquisitionService.Communication.Messages;
+global using InjectionMoldingMachineDataAcquisitionService.Domain.Configurations;
+global using InjectionMoldingMachineDataAcquisitionService.Domain.Helpers;
+global using InjectionMoldingMachineDataAcquisitionService.Domain.InjectionMoldingMachines;
+global using InjectionMoldingMachineDataAcquisitionService.Domain.Services;
+global using InjectionMoldingMachineDataAcquisitionService.Workers;
+global using MassTransit;
+global using Microsoft.Extensions.Options;
+global using Quartz;
+global using Newtonsoft.Json;
