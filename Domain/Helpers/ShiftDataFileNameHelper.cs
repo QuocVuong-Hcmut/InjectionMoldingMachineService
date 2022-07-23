@@ -16,6 +16,11 @@ public static class ShiftDataFileNameHelper
     {
         return $"S{GetCurrentShiftFileName()}";
     }
+    
+    public static string GetCurrentShiftLogFileName()
+    {
+        return $"L{GetCurrentShiftFileName()}";
+    }
 
     private static string GetCurrentShiftFileName()
     {

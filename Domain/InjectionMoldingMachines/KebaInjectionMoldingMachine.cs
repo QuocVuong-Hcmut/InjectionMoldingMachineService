@@ -11,11 +11,13 @@ public class KebaInjectionMoldingMachine
     private readonly CycleDataToCsvAppender _cycleDataToCsvAppender;
     private readonly Timer _reconnectTimer;
     private readonly IBusControl _busControl;
+    private readonly CsvLogger _csvLogger;
 
     private string? moldId;
     private double? configuredCycle;
     private DateTime currentDoorOpenTime;
     private DateTime currentDoorCloseTime;
+    private long cycleElapsed;
 
     public KebaInjectionMoldingMachine(OpcUaClient opcUaClient, CycleDataToCsvAppender cycleDataToCsvAppender, string machineId, IBusControl busControl)
     {
@@ -26,6 +28,7 @@ public class KebaInjectionMoldingMachine
         _reconnectTimer = new Timer(10000);
         _reconnectTimer.Elapsed += ReconnectTimerElapsed;
         _busControl = busControl;
+        _csvLogger = new CsvLogger();
     }
 
     public async Task Connect()
@@ -47,9 +50,16 @@ public class KebaInjectionMoldingMachine
         subscription.AddMonitorItem("ns=4;s=APPL.system.sv_CycleTime_KVB", "CycleTime", 1000, new List<Action<MetricMessage>>() {
             PublishMetricMessage,
             HandleInjectionCycle });
+        subscription.AddMonitorItem("ns=4;s=APPL.system.sv_CycleTime", "CycleTime", 1000, new List<Action<MetricMessage>>() {
+            HandleRawInjectionCycle });
         subscription.AddMonitorItem("ns=4;s=SYS.IO.ONBOARD.DI:40.value", "DoorOpenned", 1000, new List<Action<MetricMessage>>() {
             PublishMetricMessage,
             HandleDoorOpened });
+
+        subscription.AddMonitorItem("ns=4;s=APPL.system.di_DoorOpenPulse", "DoorOpenPulse", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
+        subscription.AddMonitorItem("ns=4;s=APPL.system.di_MoldClosed", "MoldClosed", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
+        subscription.AddMonitorItem("ns=4;s=APPL.system.di_SafetyDoorMid", "SafetyDoor", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
+        subscription.AddMonitorItem("ns=4;s=APPL.EasyNet.sv_iShotCounter", "ShotCount", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
     }
 
     public void SetMoldId(string moldId)
@@ -64,7 +74,8 @@ public class KebaInjectionMoldingMachine
 
     private void PublishMetricMessage(MetricMessage metricMessage)
     {
-        _busControl.Publish<UaMessage>(new UaMessage(metricMessage.Name, metricMessage.Value));
+        _busControl.Publish(new UaMessage(metricMessage.Name, metricMessage.Value));
+        _csvLogger.Log(MachineId, metricMessage.Name, metricMessage.Value, metricMessage.Timestamp);
     }
 
     private void HandleDoorOpened(MetricMessage metricMessage)
@@ -79,7 +90,6 @@ public class KebaInjectionMoldingMachine
         {
             currentDoorCloseTime = timestamp;
         }
-
     }
 
     public void HandleInjectionCycle(MetricMessage metricMessage)
@@ -91,6 +101,18 @@ public class KebaInjectionMoldingMachine
         var cycleTime = TimeSpan.FromTicks(cycle * 10);
 
         _cycleDataToCsvAppender.AppendData(timestamp, cycleTime, openTime, moldId, configuredCycle);
+    }
+
+    public void HandleRawInjectionCycle(MetricMessage metricMessage)
+    {
+        var timestamp = metricMessage.Timestamp;
+        var cycle = (long)metricMessage.Value;
+
+        if (cycle < cycleElapsed)
+        {
+            _csvLogger.Log(MachineId, "RawCycle", cycleElapsed, timestamp);
+        }
+        cycleElapsed = cycle;
     }
 
     private async void ReconnectTimerElapsed(object? sender, ElapsedEventArgs args)
