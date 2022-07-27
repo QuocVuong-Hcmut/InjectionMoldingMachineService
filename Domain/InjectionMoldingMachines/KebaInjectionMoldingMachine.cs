@@ -12,6 +12,7 @@ public class KebaInjectionMoldingMachine
     private readonly Timer _reconnectTimer;
     private readonly IBusControl _busControl;
     private readonly CsvLogger _csvLogger;
+    private OpcUaSubscription? _subscription;
 
     private string? moldId;
     private double? configuredCycle;
@@ -50,16 +51,19 @@ public class KebaInjectionMoldingMachine
         subscription.AddMonitorItem("ns=4;s=APPL.system.sv_CycleTime_KVB", "CycleTime", 1000, new List<Action<MetricMessage>>() {
             PublishMetricMessage,
             HandleInjectionCycle });
-        subscription.AddMonitorItem("ns=4;s=APPL.system.sv_CycleTime", "CycleTime", 1000, new List<Action<MetricMessage>>() {
-            HandleRawInjectionCycle });
+        subscription.AddMonitorItem("ns=4;s=APPL.system.sv_CycleTime", "CycleElapsed", 1000, new List<Action<MetricMessage>>() {
+            HandleInjectionCycleElapsed });
         subscription.AddMonitorItem("ns=4;s=SYS.IO.ONBOARD.DI:40.value", "DoorOpenned", 1000, new List<Action<MetricMessage>>() {
             PublishMetricMessage,
             HandleDoorOpened });
 
         subscription.AddMonitorItem("ns=4;s=APPL.system.di_DoorOpenPulse", "DoorOpenPulse", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
-        subscription.AddMonitorItem("ns=4;s=APPL.system.di_MoldClosed", "MoldClosed", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
+        subscription.AddMonitorItem("ns=4;s=APPL.system.di_MoldClosed", "MoldClosed", 1000, new List<Action<MetricMessage>>() {HandleMoldOpen});
         subscription.AddMonitorItem("ns=4;s=APPL.system.di_SafetyDoorMid", "SafetyDoor", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
         subscription.AddMonitorItem("ns=4;s=APPL.EasyNet.sv_iShotCounter", "ShotCount", 1000, new List<Action<MetricMessage>>() {PublishMetricMessage});
+
+        _subscription?.Dispose();
+        _subscription = subscription;
     }
 
     public void SetMoldId(string moldId)
@@ -103,7 +107,7 @@ public class KebaInjectionMoldingMachine
         _cycleDataToCsvAppender.AppendData(timestamp, cycleTime, openTime, moldId, configuredCycle);
     }
 
-    public void HandleRawInjectionCycle(MetricMessage metricMessage)
+    public void HandleInjectionCycleElapsed(MetricMessage metricMessage)
     {
         var timestamp = metricMessage.Timestamp;
         var cycle = (long)metricMessage.Value;
@@ -111,8 +115,18 @@ public class KebaInjectionMoldingMachine
         if (cycle < cycleElapsed)
         {
             _csvLogger.Log(MachineId, "RawCycle", cycleElapsed, timestamp);
+            _subscription?.SuspendMonitoredItemSubscription("CycleElapsed");
         }
         cycleElapsed = cycle;
+    }
+
+    public void HandleMoldOpen(MetricMessage metricMessage)
+    {
+        var moldOpened = !(bool)metricMessage.Value;
+        if (moldOpened)
+        {
+            _subscription?.ContinueMonitoredItemSubscription("CycleElapsed");
+        }
     }
 
     private async void ReconnectTimerElapsed(object? sender, ElapsedEventArgs args)

@@ -2,10 +2,10 @@
 using Opc.Ua.Client;
 
 namespace InjectionMoldingMachineDataAcquisitionService.Communication.Clients;
-public class OpcUaSubscription
+public class OpcUaSubscription: IDisposable
 {
     private readonly Subscription _subscription;
-    private readonly List<OpcUaNotificationHandler> notificationHandlers = new();
+    private readonly List<OpcUaNotificationHandler> _notificationHandlers = new();
 
     public OpcUaSubscription(Subscription subscription)
     {
@@ -27,18 +27,51 @@ public class OpcUaSubscription
         _subscription.AddItem(item);
         _subscription.ApplyChanges();
 
-        notificationHandlers.Add(notificationHandler);
+        _notificationHandlers.Add(notificationHandler);
     }
 
+    public void SuspendMonitoredItemSubscription(string itemName)
+    {
+        var notificationHandler = _notificationHandlers.FirstOrDefault(
+            h => h.MonitoredItem.DisplayName == itemName);
+
+        if (notificationHandler is not null)
+        {
+            _subscription.RemoveItem(notificationHandler.MonitoredItem);
+        }
+    }
+
+    public void ContinueMonitoredItemSubscription(string itemName)
+    {
+        var notificationHandler = _notificationHandlers.FirstOrDefault(
+            h => h.MonitoredItem.DisplayName == itemName);
+
+        if (notificationHandler is not null)
+        {
+            if (_subscription.MonitoredItems.Any(m => m.DisplayName == itemName))
+            {
+                return;
+            }
+            
+            _subscription.AddItem(notificationHandler.MonitoredItem);
+        }
+    }
+
+    public void Dispose()
+    {
+        _subscription.Dispose();
+    }
 
     private class OpcUaNotificationHandler
     {
         private event Action<MetricMessage>? _messageHandlers;
+        public MonitoredItem MonitoredItem { get; private set; }
 
         public OpcUaNotificationHandler(List<Action<MetricMessage>> messageHandler, MonitoredItem monitoredItem)
         {
             messageHandler.ForEach(h => _messageHandlers += h);
 
+            MonitoredItem = monitoredItem;
             monitoredItem.Notification += HandleNotification;
         }
 
