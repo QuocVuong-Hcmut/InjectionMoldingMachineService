@@ -6,13 +6,14 @@ public class OpcUaSubscription: IDisposable
 {
     private readonly Subscription _subscription;
     private readonly List<OpcUaNotificationHandler> _notificationHandlers = new();
-
+    
     public OpcUaSubscription(Subscription subscription)
     {
         _subscription = subscription;
     }
 
-    public void AddMonitorItem(string nodeId, string itemName, int samplingInterval, List<Action<MetricMessage>> handler)
+    public void AddMonitorItem(string nodeId, string itemName,
+        int samplingInterval, List<Action<MetricMessage>> handler)
     {
         MonitoredItem item = new(_subscription.DefaultItem)
         {
@@ -21,12 +22,10 @@ public class OpcUaSubscription: IDisposable
             AttributeId = Attributes.Value,
             SamplingInterval = samplingInterval
         };
-
         var notificationHandler = new OpcUaNotificationHandler(handler, item);
 
         _subscription.AddItem(item);
         _subscription.ApplyChanges();
-
         _notificationHandlers.Add(notificationHandler);
     }
 
@@ -70,11 +69,9 @@ public class OpcUaSubscription: IDisposable
         public OpcUaNotificationHandler(List<Action<MetricMessage>> messageHandler, MonitoredItem monitoredItem)
         {
             messageHandler.ForEach(h => _messageHandlers += h);
-
             MonitoredItem = monitoredItem;
             monitoredItem.Notification += HandleNotification;
         }
-
         private void HandleNotification(MonitoredItem monitoredItem, MonitoredItemNotificationEventArgs e)
         {
             MonitoredItemNotification? notification = e.NotificationValue as MonitoredItemNotification;

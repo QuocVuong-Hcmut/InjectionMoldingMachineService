@@ -135,19 +135,16 @@ public class OpcUaClient
             throw new OpcUaConnectionException();
         }
 
-        Subscription subscription = new(_session.DefaultSubscription)
+        Subscription subscription = new Subscription(_session.DefaultSubscription)
         {
             PublishingEnabled = true,
             PublishingInterval = publishingInterval
         };
 
         _session.AddSubscription(subscription);
-
         subscription.Create();
-
         var opcUaSubscription = new OpcUaSubscription(subscription);
         _subscriptions.Add(opcUaSubscription);
-
         return opcUaSubscription;
     }
 
@@ -172,7 +169,6 @@ public class OpcUaClient
         configuration.ApplicationType = ApplicationType.Client;
         configuration.ApplicationUri = "urn:MayEpClient";
         configuration.ProductUri = "Cha.MayEpClient";
-
         configuration.SecurityConfiguration = new SecurityConfiguration();
         configuration.SecurityConfiguration.ApplicationCertificate = new CertificateIdentifier();
         configuration.SecurityConfiguration.ApplicationCertificate.StoreType = CertificateStoreType.Directory;
@@ -188,9 +184,7 @@ public class OpcUaClient
         configuration.SecurityConfiguration.RejectedCertificateStore = new CertificateStoreIdentifier();
         configuration.SecurityConfiguration.RejectedCertificateStore.StoreType = CertificateStoreType.Directory;
         configuration.SecurityConfiguration.RejectedCertificateStore.StorePath = "CurrentUser\\Rejected";
-
         configuration.SecurityConfiguration.AutoAcceptUntrustedCertificates = false;
-
         configuration.TransportQuotas = new TransportQuotas();
         configuration.TransportQuotas.OperationTimeout = 600000;
         configuration.TransportQuotas.MaxStringLength = 1048576;
@@ -200,12 +194,9 @@ public class OpcUaClient
         configuration.TransportQuotas.MaxBufferSize = 65535;
         configuration.TransportQuotas.ChannelLifetime = 300000;
         configuration.TransportQuotas.SecurityTokenLifetime = 3600000;
-
         configuration.ClientConfiguration = new ClientConfiguration();
         configuration.ClientConfiguration.DefaultSessionTimeout = 360000;
-
         configuration.Validate(ApplicationType.Client);
-
         return configuration;
     }
 }

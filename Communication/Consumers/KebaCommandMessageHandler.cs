@@ -11,7 +11,6 @@ public class KebaConfigurationMessageConsumer : IConsumer<ConfigurationMessage>
     public Task Consume(ConsumeContext<ConfigurationMessage> context)
     {
         var message = context.Message;
-
         _observer.ReceiveConfigurationMessage(message);
         return Task.CompletedTask;
     }

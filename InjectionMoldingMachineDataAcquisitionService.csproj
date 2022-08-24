@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-InjectionMoldingMachineDataAcquisitionService-93A235AB-0573-4088-B14D-680B0405C8C9</UserSecretsId>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +16,7 @@
     <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua" Version="1.4.369.30" />
     <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Configuration" Version="1.4.369.30" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.4.0" />
+    <PackageReference Include="TitaniumAS.Opc.Client.NetCore" Version="1.0.2.1" />
   </ItemGroup>
 
   <ItemGroup>
